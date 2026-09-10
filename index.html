@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#101c18" />
+  <title>Lexis Field · 学术词汇训练</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="grain"></div>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="首页">
+      <span class="brand-mark">LF</span>
+      <span>Lexis Field</span>
+    </a>
+    <div class="top-actions">
+      <button class="ghost-button" id="searchButton">查词 · 翻译</button>
+      <button class="ghost-button" id="practiceButton">专项练习</button>
+      <button class="ghost-button" id="libraryButton">词库</button>
+      <button class="icon-button" id="soundToggle" aria-label="切换发音">◖</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="dashboard" class="view active">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow" id="todayLabel">TODAY</p>
+          <h1>让词汇进入你的<br><em>研究语言。</em></h1>
+          <p class="intro">不是翻译表，而是一套围绕现象学、具身性与表演研究的主动 recall practice 训练。</p>
+          <button class="primary-button" id="startButton">
+            <span>开始今日训练</span>
+            <span class="arrow">↗</span>
+          </button>
+        </div>
+
+        <aside class="today-card">
+          <div class="today-card-head">
+            <span>今日计划</span>
+            <span class="status-dot">已就绪</span>
+          </div>
+          <div class="daily-count"><strong id="newCount">15</strong><span>个新词</span></div>
+          <div class="mix-row">
+            <span><i class="research-dot"></i>研究术语</span><b>10</b>
+          </div>
+          <div class="mix-row">
+            <span><i class="life-dot"></i>生活词汇</span><b>5</b>
+          </div>
+          <div class="review-note">
+            <span>到期复习</span>
+            <strong id="dueCount">0</strong>
+            <small>不占今日新词名额</small>
+          </div>
+        </aside>
+      </div>
+
+      <section class="metrics" aria-label="学习统计">
+        <article><span class="metric-label">连续学习</span><strong id="streakMetric">0</strong><small>天</small></article>
+        <article><span class="metric-label">已掌握词汇</span><strong id="masteredMetric">0</strong><small>个</small></article>
+        <article><span class="metric-label">预计记忆率</span><strong id="retentionMetric">—</strong><small></small></article>
+        <article class="quote-card"><span>“The body is our general medium for having a world.”</span><small>— Maurice Merleau-Ponty</small></article>
+      </section>
+
+      <section class="method-strip">
+        <div><span>01</span><strong>理解</strong><small>概念与发音</small></div>
+        <div><span>02</span><strong>提取</strong><small>遮住答案回忆</small></div>
+        <div><span>03</span><strong>置入语境</strong><small>研究句子填空</small></div>
+        <div><span>04</span><strong>主动使用</strong><small>写进你的论述</small></div>
+      </section>
+    </section>
+
+    <section id="study" class="view">
+      <div class="study-top">
+        <button class="back-button" id="exitStudy">← 返回</button>
+        <div class="progress-wrap">
+          <div class="progress-meta"><span id="phaseLabel">今日新词</span><span id="progressText">1 / 15</span></div>
+          <div class="progress-track"><div id="progressBar"></div></div>
+        </div>
+        <span class="session-score" id="sessionScore">0 熟练</span>
+      </div>
+
+      <div class="study-stage">
+        <article class="word-card" id="wordCard">
+          <div class="card-meta">
+            <span class="pill" id="wordCategory">具身现象学</span>
+            <span id="exerciseType">首次理解</span>
+          </div>
+          <div id="promptArea"></div>
+          <div id="answerArea" class="answer-area hidden"></div>
+          <button class="reveal-button" id="revealButton">显示答案 <span>Space</span></button>
+          <div class="rating-panel hidden" id="ratingPanel">
+            <p>你的回忆有多顺利？</p>
+            <div class="rating-buttons">
+              <button data-rating="again"><kbd>1</kbd><strong>忘记</strong><small>很快再见</small></button>
+              <button data-rating="hard"><kbd>2</kbd><strong>困难</strong><small>缩短间隔</small></button>
+              <button data-rating="good"><kbd>3</kbd><strong>记得</strong><small>正常间隔</small></button>
+              <button data-rating="easy"><kbd>4</kbd><strong>熟练</strong><small>延长间隔</small></button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="summary" class="view summary-view">
+      <p class="eyebrow">SESSION COMPLETE</p>
+      <h2>今天的词，已经开始<br><em>成为你的语言。</em></h2>
+      <div class="summary-score"><strong id="summaryDone">15</strong><span>完成任务</span></div>
+      <div class="summary-grid">
+        <div><small>熟练</small><strong id="summaryEasy">0</strong></div>
+        <div><small>记得</small><strong id="summaryGood">0</strong></div>
+        <div><small>需要加强</small><strong id="summaryWeak">0</strong></div>
+      </div>
+      <button class="primary-button" id="finishButton"><span>回到首页</span><span class="arrow">→</span></button>
+    </section>
+  </main>
+
+  <dialog id="libraryDialog">
+    <div class="dialog-head"><div><p class="eyebrow">WORD LIBRARY</p><h2>你的词库</h2></div><button id="closeLibrary" class="icon-button">×</button></div>
+    <div class="library-stats" id="libraryStats"></div>
+    <div class="dialog-actions">
+      <label class="secondary-button">导入新词包<input type="file" id="importFile" accept="application/json" hidden></label>
+      <button class="secondary-button" id="exportButton">导出学习数据</button>
+      <button class="danger-button" id="resetButton">重置进度</button>
+    </div>
+    <div class="word-list" id="wordList"></div>
+  </dialog>
+
+  <dialog id="searchDialog" class="tool-dialog">
+    <div class="dialog-head"><div><p class="eyebrow">LOOK UP & TRANSLATE</p><h2>查词与翻译</h2></div><button id="closeSearch" class="icon-button" aria-label="关闭">×</button></div>
+    <form class="search-form" id="searchForm">
+      <input id="searchInput" maxlength="200" autocomplete="off" placeholder="输入英文单词、短语或中文……" aria-label="要查询或翻译的内容">
+      <button class="primary-button" type="submit"><span>查询</span><span class="arrow">→</span></button>
+    </form>
+    <p class="network-note"><span id="networkDot"></span><span id="networkStatus">联网功能待使用</span> · 查询内容会发送至词典和翻译服务</p>
+    <div id="searchResult" class="search-result empty-result">输入内容后，可以查看英式音标、英文释义、中文翻译和例句。</div>
+  </dialog>
+
+  <dialog id="practiceDialog" class="tool-dialog">
+    <div class="dialog-head"><div><p class="eyebrow">FOCUSED PRACTICE</p><h2>专项练习</h2></div><button id="closePractice" class="icon-button" aria-label="关闭">×</button></div>
+    <div id="practiceSetup">
+      <p class="practice-intro">从已经学过的词中生成10道题，不改变每天的新词计划。</p>
+      <div class="practice-modes">
+        <button data-mode="choice"><span>01</span><strong>选择释义</strong><small>从相近选项中辨别含义</small></button>
+        <button data-mode="spelling"><span>02</span><strong>拼写训练</strong><small>根据中文主动写出英文</small></button>
+        <button data-mode="cloze"><span>03</span><strong>语境填空</strong><small>在真实例句中恢复目标词</small></button>
+      </div>
+    </div>
+    <div id="practiceRunner" class="hidden">
+      <div class="practice-progress"><span id="practiceProgress">1 / 10</span><span id="practiceScore">答对 0</span></div>
+      <h3 id="practiceQuestion"></h3>
+      <div id="practiceAnswers"></div>
+      <div id="practiceFeedback" class="practice-feedback hidden"></div>
+      <button id="nextPractice" class="secondary-button hidden">下一题 →</button>
+    </div>
+  </dialog>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

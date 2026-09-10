@@ -1,6 +1,6 @@
-/* Starter library. Tuple: term, phonetic, Chinese, definition, example, research application */
+/* Starter library. Tuple: term, phonetic, Chinese, definition, example, legacy research note */
 const researchRows = [
-  ["embodiment","/ɪmˈbɒdimənt/","具身性；身体化","定性","意义、认知与行动通过身体而形成，而非发生在脱离身体的意识中。","Embodiment is central to understanding how performers make meaning through bodily action.","说明京剧动作不是音乐之外的装饰，而是参与生成表演意义。"],
+  ["embodiment","/ɪmˈbɒdimənt/","体现；具身化","意义、认知与行动通过身体而形成，而非只发生在抽象意识中。","Embodiment is central to understanding how performers make meaning through bodily action.",""],
   ["lived body","/lɪvd ˈbɒdi/","生活身体；体验身体","从第一人称被生活和体验的身体，而不是被观察、测量的客观身体。","The lived body is the performer’s way of inhabiting the musical world.","分析演奏者怎样从内部体验弓、琴、重心与动作。"],
   ["body schema","/ˈbɒdi ˈskiːmə/","身体图式","身体对于自身位置、能力与运动可能性的前反思性整体把握。","Repeated practice reshapes the performer’s body schema.","解释程式训练如何沉淀为无需逐步思考的动作能力。"],
   ["body image","/ˈbɒdi ˈɪmɪdʒ/","身体意象","主体对自己身体的知觉、信念、判断和态度。","Body image should not be confused with the pre-reflective body schema.","帮助区分身体的反思性表象与实际动作组织。"],
@@ -96,11 +96,107 @@ const lifeRows = [
   ["revise","/rɪˈvaɪz/","修改；复习","To improve a text or study material again.","I revised the methodology after receiving feedback.","英式英语中兼有修改和复习之意。"]
 ];
 
+const tokenGlosses = {
+  lived: "亲身经历的；实际体验过的", body: "身体", schema: "图式；组织信息的基本模式", image: "形象；意象；图像",
+  motor: "运动的；肌肉动作的", operative: "起作用的；运作中的", intentionality: "意向性；意识朝向某物的性质",
+  habitual: "习惯性的", subject: "主体；主语；主题", being: "存在；生命体", in: "在……之中", the: "这个；特指的",
+  world: "世界", flesh: "肉；肉身", phenomenological: "现象学的；关于经验如何显现的", reduction: "减少；还原",
+  perceptual: "知觉的", field: "领域；场；田野", sensorimotor: "感觉—运动的", contingency: "偶然性；依赖条件",
+  embodied: "通过身体体现的", knowledge: "知识；认识", tacit: "默认的；未明说的", practice: "实践；练习",
+  led: "由……引导的", as: "作为", research: "研究", situated: "处于具体情境中的", thick: "厚的；密集的",
+  description: "描述", graphic: "图形的；视觉的", notation: "记谱法；符号系统", performer: "表演者；演奏者",
+  agency: "能动性；自主行动能力", movement: "动作；运动", quality: "质量；特质", dynamic: "动态的；有活力的",
+  form: "形式；形态", corporeal: "身体的；有形的", memory: "记忆", re: "再次；重新", ecological: "生态的；环境关系的",
+  perception: "感知；知觉", participant: "参与者；参加的", observation: "观察", stimulated: "受到刺激或提示的",
+  recall: "回忆；记起", micro: "微观的；细小的", first: "第一；最先的", person: "人；语法人称", account: "叙述；说明；账户",
+  coding: "编码；分类标记", framework: "框架；体系", artistic: "艺术的", inquiry: "探究；询问", sonic: "声音的；声响的",
+  account: "叙述；说明；账户", for: "为了；因为；针对", draw: "画；拉；取用", on: "在……上；继续", point: "点；观点；指出",
+  out: "向外；显露", work: "工作；处理", through: "穿过；从头到尾", follow: "跟随", up: "向上；继续完成",
+  engage: "参与；吸引；认真处理", with: "和；使用", make: "制作；使得", sense: "意义；感觉；道理", of: "……的",
+  come: "来；到达", across: "横过；偶然遇到"
+};
+
+const beginnerResearch = new Set([
+  "gesture", "appearance", "horizon", "translation", "embodiment", "affordance", "intentionality", "lifeworld",
+  "reversibility", "indeterminacy"
+]);
+
+const exampleTranslations = {
+  "gesture": "姿态连接着身体动作与音乐表达。",
+  "appearance": "意义通过一个姿态呈现出来的方式而产生。",
+  "horizon": "每一个被感知的姿态，都在一系列可能动作的背景中出现。",
+  "translation": "这里的转化是生成新意义的，而不是机械地寻找完全对应。",
+  "embodiment": "具身化是理解表演者如何通过身体行动创造意义的核心。",
+  "affordance": "这条图形线条更容易引出演奏者做出挥扫式动作，而不是分段动作。",
+  "intentionality": "知觉具有意向性，因为它总是朝向某个世界中的对象。",
+  "body image": "身体意象不应与前反思层面的身体图式混为一谈。",
+  "body schema": "反复练习会重新塑造表演者的身体图式。",
+  "lived body": "体验中的身体，是表演者置身于音乐世界的方式。",
+  "movement quality": "同一条运动轨迹会因不同的动作质感而获得新的意义。",
+  "dynamic form": "动态形式把身体感受到的运动与表达意义联系起来。",
+  "graphic notation": "图形记谱可以邀请身体性的诠释，而不是规定固定音高。",
+  "performer agency": "这种记谱扩大了表演者的自主选择，同时保留了作品结构。",
+  "embodied knowledge": "具身知识通过熟练行动表现出来，而不只是通过口头规则。",
+  "tacit knowledge": "表演者实时调整姿态时，会依赖那些难以言明的默会知识。",
+  "lifeworld": "音乐实践发生在一个由文化塑造的生活世界中。",
+  "perceptual field": "一个姿态会在表演者的知觉场中变得突出。",
+  "habitual body": "习惯身体承载着通过反复练习获得的技巧。",
+  "artistic inquiry": "艺术探究重视感官性和表演性的认识方式。",
+  "articulate": "她在导师讨论中清楚地表达了自己的论点。",
+  "nuance": "翻译丢失了原始姿态中的一些细微差别。",
+  "clarify": "你能说明一下你所说的‘身体知识’是什么意思吗？",
+  "elaborate": "你能更详细地说明这个方法过程吗？",
+  "coherent": "修改后的章节现在呈现出一个连贯的论证。",
+  "concise": "摘要要简洁，但也要具体。",
+  "relevant": "这个例子与我的项目尤其相关。",
+  "assumption": "我们需要检视这种解释背后的预设。",
+  "perspective": "从表演者的角度看，这种记谱具有开放性。",
+  "constraint": "时间是当前实验的主要限制条件。",
+  "feasible": "在一个学期内完成小型先导研究是可行的。",
+  "tentative": "我的暂定结论是，这份乐谱改变了身体的注意方式。",
+  "compelling": "这些录音为变化提供了有说服力的证据。",
+  "ambiguous": "这条指示被有意写得较为含糊。",
+  "substantial": "这次修改需要作出大量而实质性的改动。",
+  "account for": "分析必须解释并考虑表演者之间的差异。",
+  "draw on": "这个项目借鉴了现象学和表演研究。",
+  "point out": "我的导师指出了论证中的一个缺口。",
+  "work through": "我需要时间把这个理论章节逐步梳理清楚。",
+  "follow up": "会议结束后我会通过电子邮件继续跟进。",
+  "prioritise": "本周我需要优先处理文献综述。",
+  "overlook": "人们很容易忽略表演者的感官经验。",
+  "convey": "这个姿态传达的是克制，而不是软弱。",
+  "retain": "改编版本保留了原作的动态特质。",
+  "encounter": "我在阅读梅洛-庞蒂时遇到了这个概念。",
+  "engage with": "本章对现有研究进行了实质而批判性的讨论。",
+  "make sense of": "这份日记帮助我理解自己的身体反应。",
+  "come across": "我昨天偶然发现了一篇有用的文章。",
+  "distinguish": "我们应当区分再现与显现。",
+  "revise": "收到反馈后，我修改了研究方法部分。"
+};
+
+function splitComponents(term) {
+  return term.toLowerCase().replace(/[–—]/g, "-").split(/[\s-]+/).filter(Boolean).map(part => ({
+    word: part,
+    meaning: tokenGlosses[part] || "这是术语的一部分；先结合整体释义理解"
+  }));
+}
+
+function buildNormalMeaning(row) {
+  const [term, , chinese] = row;
+  const pieces = splitComponents(term);
+  if (pieces.length > 1) return `这不是一个需要整块死记的“长单词”，而是由 ${pieces.length} 个普通单词组成的表达。先分别理解每个词，再把整体理解为「${chinese}」。`;
+  return `“${term}”在普通英语中通常表示「${chinese}」。先掌握这个核心意思，再进入更精确的专业用法。`;
+}
+
 const toWords = (rows, type) => rows.map((r, i) => ({
   id: `${type}-${i + 1}`,
   type,
   term: r[0], phonetic: r[1], chinese: r[2], definition: r[3],
   example: r[4], application: r[5],
+  normalMeaning: buildNormalMeaning(r),
+  components: splitComponents(r[0]),
+  exampleZh: exampleTranslations[r[0]] || "",
+  level: type === "life" ? 1 : beginnerResearch.has(r[0]) ? 1 : (r[0].includes(" ") || r[0].includes("-")) ? 3 : 2,
   category: type === "research" ? "研究术语" : "生活词汇"
 }));
 

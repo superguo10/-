@@ -2,7 +2,8 @@ const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = "lexis-field-v1";
 const DAY_MS = 86400000;
 
-const defaultState = { progress: {}, plans: {}, sessions: {}, customWords: [], sound: true };
+const CURRICULUM_VERSION = 3;
+const defaultState = { progress: {}, plans: {}, sessions: {}, customWords: [], exampleTranslations: {}, sound: true, curriculumVersion: CURRICULUM_VERSION };
 let state = loadState();
 let queue = [];
 let currentIndex = 0;
@@ -10,7 +11,15 @@ let currentWord = null;
 let sessionRatings = { easy: 0, good: 0, hard: 0, again: 0 };
 
 function loadState() {
-  try { return { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const loaded = { ...defaultState, ...raw };
+    if (raw.curriculumVersion !== CURRICULUM_VERSION) {
+      loaded.plans = {};
+      loaded.curriculumVersion = CURRICULUM_VERSION;
+    }
+    return loaded;
+  }
   catch { return { ...defaultState }; }
 }
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -47,7 +56,9 @@ function getTodayPlan() {
   const choose = (type, count) => {
     let pool = allWords().filter(w => w.type === type && !used.has(w.id));
     if (pool.length < count) pool = allWords().filter(w => w.type === type);
-    return seededShuffle(pool, `${today}-${type}`).slice(0, count).map(w => w.id);
+    const levels = [...new Set(pool.map(w => w.level || 2))].sort((a, b) => a - b);
+    const ordered = levels.flatMap(level => seededShuffle(pool.filter(w => (w.level || 2) === level), `${today}-${type}-${level}`));
+    return ordered.slice(0, count).map(w => w.id);
   };
   state.plans[today] = [...choose("research", 10), ...choose("life", 5)];
   saveState();
@@ -144,20 +155,64 @@ function renderCard() {
   $("progressBar").style.width = `${(currentIndex / queue.length) * 100}%`;
   $("sessionScore").textContent = `${sessionRatings.easy} 熟练`;
   $("wordCategory").textContent = currentWord.type === "research" ? "研究术语" : "生活词汇";
-  const labels = { meaning: "主动回忆", production: "中译英", cloze: "语境填空", application: "观点表达" };
+  const labels = { meaning: "基础词义", production: "中译英", cloze: "语境填空", application: "主动造句" };
   $("exerciseType").textContent = labels[ex];
 
   if (ex === "meaning") {
-    $("promptArea").innerHTML = `<div class="word-main"><h2>${currentWord.term}</h2><span class="phonetic">${currentWord.phonetic}</span><button class="sound-button" aria-label="播放发音">◖</button></div><p class="question-label">先不要翻面：请说出它的含义，并尝试解释这个概念。</p>`;
+    const prompt = (currentWord.components || []).length > 1 ? "先说出其中每个单词的常见意思，再尝试理解整个词组。" : "先说出它在普通英语中最常见的意思。";
+    $("promptArea").innerHTML = `<div class="word-main"><h2>${currentWord.term}</h2><span class="phonetic">${currentWord.phonetic}</span><button class="sound-button" aria-label="播放发音">◖</button></div><p class="question-label">${prompt}</p>`;
   } else if (ex === "production") {
     $("promptArea").innerHTML = `<p class="cue"><strong>${currentWord.chinese}</strong></p><p class="question-label">请回忆英文术语，最好完整说出或写出。</p>`;
   } else if (ex === "cloze") {
     $("promptArea").innerHTML = `<p class="cue">${highlightedCloze(currentWord.example, currentWord.term)}</p><p class="question-label">请填入最恰当的英文词或词组。</p>`;
   } else {
-    $("promptArea").innerHTML = `<p class="cue">这个概念如何用于解释你的<br><strong>京剧动作—图形记谱—小提琴表演</strong>研究？</p><p class="question-label">请先用英文或中文口头回答，再与参考思路比较。</p>`;
+    $("promptArea").innerHTML = `<p class="cue">请用 <strong>${currentWord.term}</strong><br>说一句自然、简单的英语。</p><p class="question-label">先表达日常含义；熟悉之后再进入专业语境。</p>`;
   }
-  $("answerArea").innerHTML = `<div class="answer-title"><strong>${currentWord.term}</strong><span>${currentWord.phonetic} · ${currentWord.chinese}</span><button class="sound-button" aria-label="播放发音">◖</button></div><p class="definition">${currentWord.definition}</p><div class="example">${currentWord.example}</div><p class="application"><strong>用于你的研究：</strong>${currentWord.application}</p>`;
+  const parts = (currentWord.components || [{ word: currentWord.term, meaning: currentWord.chinese }])
+    .map(p => `<div class="word-part"><strong>${escapeHtml(p.word)}</strong><span>${escapeHtml(p.meaning)}</span></div>`).join("");
+  const partLabel = partOfSpeech(currentWord);
+  const exampleZh = currentWord.exampleZh || state.exampleTranslations?.[currentWord.id] || "正在获取中文翻译…";
+  $("answerArea").innerHTML = `<div class="answer-title"><strong>${escapeHtml(currentWord.term)}</strong><span>${escapeHtml(currentWord.phonetic)} · ${escapeHtml(currentWord.chinese)}</span><button class="sound-button" aria-label="播放发音">◖</button></div>
+    <section class="learning-section basic-meaning"><small>第一步 · 普通英语中的作用</small><p><b>${partLabel}</b>　${escapeHtml(currentWord.normalMeaning || currentWord.chinese)}</p></section>
+    ${(currentWord.components || []).length > 1 ? `<section class="learning-section"><small>第二步 · 逐词拆解</small><div class="word-parts">${parts}</div></section>` : ""}
+    <section class="learning-section"><small>${(currentWord.components || []).length > 1 ? "第三步" : "第二步"} · 完整含义</small><p class="definition">${escapeHtml(currentWord.definition)}</p></section>
+    <section class="example-block"><small>例句</small><p class="example-en">${escapeHtml(currentWord.example)}</p><p class="example-zh" id="exampleTranslation">${escapeHtml(exampleZh)}</p><p class="example-note"><strong>这里怎么用：</strong>${escapeHtml(exampleUsage(currentWord, partLabel))}</p></section>`;
   document.querySelectorAll(".sound-button").forEach(b => b.addEventListener("click", () => speak(currentWord.term)));
+  ensureExampleTranslation(currentWord);
+}
+
+function partOfSpeech(word) {
+  const adjectives = new Set(["pre-reflective", "coherent", "concise", "relevant", "feasible", "tentative", "compelling", "ambiguous", "substantial"]);
+  const verbs = new Set(["articulate", "clarify", "elaborate", "prioritise", "overlook", "convey", "retain", "encounter", "distinguish", "revise", "account for", "draw on", "point out", "work through", "follow up", "engage with", "make sense of", "come across"]);
+  if (adjectives.has(word.term)) return "形容词";
+  if (verbs.has(word.term)) return word.term.includes(" ") ? "动词短语" : "动词";
+  return word.term.includes(" ") || word.term.includes("-") ? "名词性术语" : "名词";
+}
+
+function exampleUsage(word, label) {
+  if ((word.components || []).length > 1) return `“${word.term}”在句中作为一个完整的${label}使用，整体表示“${word.chinese}”，不要逐字硬译。`;
+  return `“${word.term}”在句中作${label}，核心意思是“${word.chinese}”。先掌握这个常见作用，再记更精确的专业含义。`;
+}
+
+async function ensureExampleTranslation(word) {
+  if (!word?.example || word.exampleZh || state.exampleTranslations?.[word.id] || !/[a-z]/i.test(word.example)) return;
+  try {
+    const result = await fetchJson(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word.example)}&langpair=en|zh-CN`);
+    const translated = result?.responseData?.translatedText;
+    if (!translated) throw new Error("no translation");
+    state.exampleTranslations ||= {};
+    state.exampleTranslations[word.id] = translated;
+    saveState();
+    if (currentWord?.id === word.id) {
+      const el = $("exampleTranslation");
+      if (el) el.textContent = translated;
+    }
+  } catch {
+    if (currentWord?.id === word.id) {
+      const el = $("exampleTranslation");
+      if (el) el.textContent = "暂时无法联网获取翻译；稍后重新打开本卡会自动重试。";
+    }
+  }
 }
 
 function reveal() {

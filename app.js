@@ -558,13 +558,24 @@ function startPractice(mode) {
   practiceState = { mode, words: pool.slice(0, Math.min(10, pool.length)), index: 0, score: 0, pool };
   $("practiceSetup").classList.add("hidden");
   $("practiceRunner").classList.remove("hidden");
+  $("practiceProgress").parentElement.classList.remove("hidden");
+  $("practiceQuestion").classList.remove("hidden");
+  $("practiceAnswers").classList.remove("hidden");
+  $("practiceFeedback").classList.add("hidden");
+  $("nextPractice").classList.add("hidden");
+  $("practiceFinish").classList.add("hidden");
   renderPracticeQuestion();
 }
 function renderPracticeQuestion() {
   const p = practiceState;
   if (p.index >= p.words.length) {
-    $("practiceRunner").innerHTML = `<div class="practice-finish"><strong>${p.score}/${p.words.length}</strong><p>练习完成。错题会继续出现在今后的复习中。</p><button class="secondary-button" id="practiceAgain">再练一次</button></div>`;
-    $("practiceAgain").addEventListener("click", () => { $("practiceDialog").close(); openPractice(); });
+    $("practiceProgress").parentElement.classList.add("hidden");
+    $("practiceQuestion").classList.add("hidden");
+    $("practiceAnswers").classList.add("hidden");
+    $("practiceFeedback").classList.add("hidden");
+    $("nextPractice").classList.add("hidden");
+    $("practiceFinalScore").textContent = `${p.score}/${p.words.length}`;
+    $("practiceFinish").classList.remove("hidden");
     return;
   }
   const word = p.words[p.index];
@@ -573,7 +584,8 @@ function renderPracticeQuestion() {
   $("practiceFeedback").className = "practice-feedback hidden";
   $("nextPractice").classList.add("hidden");
   if (p.mode === "choice") {
-    $("practiceQuestion").innerHTML = `${escapeHtml(word.term)}<br><span class="phonetic">请选择最准确的中文含义</span>`;
+    $("practiceQuestion").innerHTML = `<span class="practice-word-line"><span>${escapeHtml(word.term)}</span><button class="sound-button practice-sound-button" id="practiceWordSound" type="button" aria-label="播放 ${escapeHtml(word.term)} 的发音">◖</button></span><span class="phonetic practice-instruction">请选择最准确的中文含义</span>`;
+    $("practiceWordSound").addEventListener("click", () => speak(word.term));
     const wrong = seededShuffle(p.pool.filter(w => w.id !== word.id), `${word.id}-${p.index}`).slice(0, 3).map(w => w.chinese);
     const options = seededShuffle([word.chinese, ...wrong], `${p.index}-${word.id}`);
     $("practiceAnswers").innerHTML = `<div class="practice-options">${options.map(o => `<button data-answer="${escapeHtml(o)}">${escapeHtml(o)}</button>`).join("")}</div>`;
@@ -591,7 +603,9 @@ function gradePractice(correct, word, control) {
   if (correct) practiceState.score++;
   if (control?.classList) control.classList.add(correct ? "correct" : "wrong");
   $("practiceFeedback").className = `practice-feedback${correct ? "" : " wrong"}`;
-  $("practiceFeedback").innerHTML = correct ? `正确：<strong>${escapeHtml(word.term)}</strong>` : `正确答案是 <strong>${escapeHtml(word.term)}</strong> · ${escapeHtml(word.chinese)}`;
+  const result = correct ? `正确：<strong>${escapeHtml(word.term)}</strong>` : `正确答案是 <strong>${escapeHtml(word.term)}</strong> · ${escapeHtml(word.chinese)}`;
+  $("practiceFeedback").innerHTML = `<span>${result}</span><button class="sound-button practice-feedback-sound" type="button" aria-label="播放 ${escapeHtml(word.term)} 的发音">◖</button>`;
+  $("practiceFeedback").querySelector(".practice-feedback-sound").addEventListener("click", () => speak(word.term));
   $("nextPractice").classList.remove("hidden");
 }
 function nextPracticeQuestion() { practiceState.index++; renderPracticeQuestion(); }
@@ -611,6 +625,11 @@ $("practiceButton").addEventListener("click", openPractice);
 $("closePractice").addEventListener("click", () => $("practiceDialog").close());
 $("practiceSetup").addEventListener("click", e => { const b = e.target.closest("button[data-mode]"); if (b) startPractice(b.dataset.mode); });
 $("nextPractice").addEventListener("click", nextPracticeQuestion);
+$("practiceAgain").addEventListener("click", () => {
+  $("practiceRunner").classList.add("hidden");
+  $("practiceFinish").classList.add("hidden");
+  $("practiceSetup").classList.remove("hidden");
+});
 $("exportButton").addEventListener("click", exportData);
 $("importFile").addEventListener("change", e => e.target.files[0] && importData(e.target.files[0]));
 $("resetButton").addEventListener("click", () => {

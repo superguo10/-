@@ -3,7 +3,7 @@ const STORAGE_KEY = "lexis-field-v1";
 const DAY_MS = 86400000;
 
 const CURRICULUM_VERSION = 3;
-const defaultState = { progress: {}, plans: {}, sessions: {}, customWords: [], exampleTranslations: {}, sound: true, curriculumVersion: CURRICULUM_VERSION };
+const defaultState = { progress: {}, plans: {}, sessions: {}, customWords: [], exampleTranslations: {}, quickLookups: {}, sound: true, curriculumVersion: CURRICULUM_VERSION };
 let state = loadState();
 let queue = [];
 let currentIndex = 0;
@@ -229,6 +229,110 @@ function speak(text) {
   utterance.lang = "en-GB";
   utterance.rate = .82;
   speechSynthesis.speak(utterance);
+}
+
+function selectedEnglishWord() {
+  const selected = window.getSelection()?.toString().trim() || "";
+  const match = selected.match(/[A-Za-z]+(?:['’\-][A-Za-z]+)*/);
+  return match?.[0]?.replace(/[’']s$/i, "") || "";
+}
+
+function localWordHelp(word) {
+  const lower = word.toLowerCase();
+  const exact = allWords().find(item => item.term.toLowerCase() === lower);
+  if (exact) return {
+    word,
+    phonetic: exact.phonetic,
+    part: partOfSpeech(exact),
+    translation: exact.chinese,
+    definition: exact.normalMeaning || exact.definition
+  };
+  for (const item of allWords()) {
+    const component = item.components?.find(part => part.word.toLowerCase() === lower && !part.meaning.startsWith("这是术语"));
+    if (component) return { word, phonetic: "", part: "基础词义", translation: component.meaning, definition: `这是词组“${item.term}”中的一个构成词。` };
+  }
+  return null;
+}
+
+function ensureQuickPopover() {
+  let popover = $("quickWordPopover");
+  if (popover) return popover;
+  popover = document.createElement("aside");
+  popover.id = "quickWordPopover";
+  popover.className = "quick-word-popover hidden";
+  popover.setAttribute("role", "dialog");
+  popover.setAttribute("aria-label", "单词简释");
+  popover.innerHTML = `<button class="quick-close" aria-label="关闭简释">×</button><div id="quickWordBody"></div>`;
+  document.body.appendChild(popover);
+  popover.querySelector(".quick-close").addEventListener("click", closeQuickPopover);
+  return popover;
+}
+
+function positionQuickPopover(popover, x, y) {
+  popover.classList.remove("hidden");
+  const margin = 12;
+  const width = Math.min(340, window.innerWidth - margin * 2);
+  popover.style.width = `${width}px`;
+  const left = Math.min(Math.max(margin, x + 12), window.innerWidth - width - margin);
+  popover.style.left = `${left}px`;
+  popover.style.top = `${Math.max(margin, y + 16)}px`;
+  requestAnimationFrame(() => {
+    const rect = popover.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight - margin) popover.style.top = `${Math.max(margin, y - rect.height - 14)}px`;
+  });
+}
+
+function renderQuickWord(result, status = "ready") {
+  const body = $("quickWordBody");
+  if (!body) return;
+  if (status === "loading") {
+    body.innerHTML = `<div class="quick-loading"><span></span>正在查询 <strong>${escapeHtml(result.word)}</strong>…</div>`;
+    return;
+  }
+  if (status === "error") {
+    body.innerHTML = `<h3>${escapeHtml(result.word)}</h3><p class="quick-error">暂时没有查到这个词。请检查网络，或使用顶部“查词 · 翻译”进行完整查询。</p>`;
+    return;
+  }
+  body.innerHTML = `<div class="quick-head"><div><h3>${escapeHtml(result.word)}</h3>${result.phonetic ? `<span>${escapeHtml(result.phonetic)}</span>` : ""}</div><button class="quick-sound" aria-label="播放发音">◖</button></div><div class="quick-translation">${escapeHtml(result.translation || "暂无中文翻译")}</div><small>${escapeHtml(result.part || "基础释义")}</small><p>${escapeHtml(result.definition || "暂无简明解释")}</p>`;
+  body.querySelector(".quick-sound").addEventListener("click", () => speak(result.word));
+}
+
+async function openQuickWord(word, x, y) {
+  const popover = ensureQuickPopover();
+  positionQuickPopover(popover, x, y);
+  const local = localWordHelp(word);
+  if (local) return renderQuickWord(local);
+  const cacheKey = word.toLowerCase();
+  if (state.quickLookups?.[cacheKey]) return renderQuickWord(state.quickLookups[cacheKey]);
+  renderQuickWord({ word }, "loading");
+  try {
+    const [dictResult, translationResult] = await Promise.allSettled([
+      fetchJson(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(cacheKey)}`),
+      fetchJson(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|zh-CN`)
+    ]);
+    const dict = dictResult.status === "fulfilled" ? dictResult.value : {};
+    const english = Array.isArray(dict.en) ? dict.en : [];
+    const entry = english.find(item => item.definitions?.length) || english[0];
+    const first = entry?.definitions?.[0];
+    const result = {
+      word,
+      phonetic: "",
+      part: entry?.partOfSpeech || "基础释义",
+      translation: translationResult.status === "fulfilled" ? translationResult.value?.responseData?.translatedText || "" : "",
+      definition: stripMarkup(first?.definition || "")
+    };
+    if (!result.translation && !result.definition) throw new Error("not found");
+    state.quickLookups ||= {};
+    state.quickLookups[cacheKey] = result;
+    saveState();
+    if (!popover.classList.contains("hidden") && $("quickWordBody")?.textContent.includes(word)) renderQuickWord(result);
+  } catch {
+    renderQuickWord({ word }, "error");
+  }
+}
+
+function closeQuickPopover() {
+  $("quickWordPopover")?.classList.add("hidden");
 }
 
 function recordRating(word, rating) {
@@ -512,7 +616,18 @@ $("importFile").addEventListener("change", e => e.target.files[0] && importData(
 $("resetButton").addEventListener("click", () => {
   if (confirm("确定清除全部学习记录吗？内置词库不会被删除。")) { state = { ...defaultState, customWords: state.customWords }; saveState(); renderLibrary(); renderDashboard(); }
 });
+document.addEventListener("dblclick", event => {
+  if (event.target.closest?.("#quickWordPopover")) return;
+  const word = selectedEnglishWord();
+  if (word) openQuickWord(word, event.clientX, event.clientY);
+});
+document.addEventListener("pointerdown", event => {
+  const popover = $("quickWordPopover");
+  if (popover && !popover.classList.contains("hidden") && !event.target.closest?.("#quickWordPopover")) closeQuickPopover();
+});
+window.addEventListener("scroll", closeQuickPopover, true);
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeQuickPopover();
   if (!$("study").classList.contains("active")) return;
   if (e.code === "Space" && !$("revealButton").classList.contains("hidden")) { e.preventDefault(); reveal(); }
   const map = { "1": "again", "2": "hard", "3": "good", "4": "easy" };
